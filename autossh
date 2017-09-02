@@ -1,8 +1,4 @@
 #! /bin/sh
-# author: ClÃ©ment DÃ©siles
-# date: 01/08/2016
-# source: https://gist.github.com/suma/8134207
-# source: http://stackoverflow.com/questions/34094792/autossh-pid-is-not-equal-to-the-one-in-pidfile-when-using-start-stop-daemon
 
 ### BEGIN INIT INFO
 # Provides:          autossh
@@ -27,7 +23,6 @@ KEY_PATH=/home/pi/.ssh/id_rsa
 
 NAME=autossh
 DAEMON=/usr/bin/autossh
-#DAEMON=/usr/lib/autossh/autossh
 AUTOSSH_ARGS="-M $MONITOR_PORT -f"
 SSH_ARGS="-nNTv4 -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -o IdentitiesOnly=yes -o StrictHostKeyChecking=no \
          -i $KEY_PATH -R $TUNNEL_PORT:localhost:$TUNNEL_REMOTE_PORT $TUNNEL_USER@$TUNNEL_HOST"
