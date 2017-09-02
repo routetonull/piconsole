@@ -1,0 +1,81 @@
+#! /bin/sh
+# author: ClÃ©ment DÃ©siles
+# date: 01/08/2016
+# source: https://gist.github.com/suma/8134207
+# source: http://stackoverflow.com/questions/34094792/autossh-pid-is-not-equal-to-the-one-in-pidfile-when-using-start-stop-daemon
+
+### BEGIN INIT INFO
+# Provides:          autossh
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: autossh initscript
+# Description:       establish a tunnelled connexion for remote access
+### END INIT INFO
+
+. /etc/environment
+. /lib/init/vars.sh
+. /lib/lsb/init-functions
+
+TUNNEL_HOST=vps
+TUNNEL_USER=pi
+TUNNEL_PORT=2000
+TUNNEL_REMOTE_PORT=2000
+MONITOR_PORT=42000
+KEY_PATH=/home/pi/.ssh/id_rsa
+
+NAME=autossh
+DAEMON=/usr/bin/autossh
+#DAEMON=/usr/lib/autossh/autossh
+AUTOSSH_ARGS="-M $MONITOR_PORT -f"
+SSH_ARGS="-nNTv4 -o ServerAliveInterval=60 -o ServerAliveCountMax=3 -o IdentitiesOnly=yes -o StrictHostKeyChecking=no \
+         -i $KEY_PATH -R $TUNNEL_PORT:localhost:$TUNNEL_REMOTE_PORT $TUNNEL_USER@$TUNNEL_HOST"
+
+DESC="autossh for reverse ssh"
+SCRIPTNAME=/etc/init.d/$NAME
+DAEMON_ARGS=" $AUTOSSH_ARGS $SSH_ARGS"
+
+# Export PID for autossh
+AUTOSSH_PIDFILE=/var/run/$NAME.pid
+export AUTOSSH_PIDFILE
+
+do_start() {
+        start-stop-daemon --start --background --name $NAME --exec $DAEMON --test > /dev/null || return 1
+        start-stop-daemon --start --background --name $NAME --exec $DAEMON -- $DAEMON_ARGS    || return 2
+}
+
+do_stop() {
+        start-stop-daemon --stop --name $NAME --retry=TERM/5/KILL/9 --pidfile $AUTOSSH_PIDFILE --remove-pidfile
+        RETVAL="$?"
+        [ "$RETVAL" = 2 ] && return 2
+        start-stop-daemon --stop --oknodo --retry=0/5/KILL/9 --exec $DAEMON
+        [ "$?" = 2 ] && return 2
+        return "$RETVAL"
+}
+
+case "$1" in
+  start)
+        log_daemon_msg "Starting $DESC" "$NAME"
+        do_start
+        case "$?" in
+                0|1) log_end_msg 0 ;;
+                2) log_end_msg 1 ;;
+        esac
+        ;;
+  stop)
+        log_daemon_msg "Stopping $DESC" "$NAME"
+        do_stop
+        case "$?" in
+                0|1) log_end_msg 0 ;;
+                2) log_end_msg 1 ;;
+        esac
+        ;;
+  status)
+        status_of_proc "$DAEMON" "$NAME" && exit 0 || exit $?
+        ;;
+  *)
+        echo "Usage: $SCRIPTNAME {start|stop|status|restart}" >&2
+        exit 3
+        ;;
+esac
